@@ -1,0 +1,22 @@
+[monitor]
+smart_wallets = [
+  "EyR8xS5kGD2FjFBbQNWkpVuceZ8pedP2cXUtRCxt5BA5",
+  "6bsszn9QpAY6Q5ZYhpXZCKxovfN1Ut9rGFg1of5FbPMS",
+  "K4SEJ5zKwC3WWRYUUHwPVtas8jHEsHxAojpweQo2JNL",
+  "62Z1UMFA62nkTpbZbXy3saAURgWME2J7pXvLk5g9hXFd",
+  "Es8bkApZq6zrL34JMW6Qx3uQpwzp2dc542vkuSyWeVKQ",
+  "EtkVzqhQWRi3396jsnv2dbxYAkhEUrPtECdm84YAqryQ",
+  "4GUNYB3aFdQLEVXYd2dx7UqS9NypsopHQSyvaA9jcAEv",
+  "AzPZUoczWxDKgaC3Cxo1K2hhNBrp82VUamjSsMWeKgKC",
+]
+
+[parser]
+
+[order]
+gmgn_bot_name = ""
+tg_api_hash = ""
+tg_api_id = 24384885
+
+[tgbot]
+token = ""
+my_chat_id = 50490631221

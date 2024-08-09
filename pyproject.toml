@@ -1,0 +1,35 @@
+[project]
+name = "gmgn-auto-trader"
+version = "0.1.0"
+description = "an Automated program for Trading with GMGN Bot"
+authors = [{ name = "mkdir700", email = "mkdir700@gmail.com" }]
+dependencies = [
+    "telethon>=1.36.0",
+    "httpx>=0.27.0",
+    "loguru>=0.7.2",
+    "python-dotenv>=1.0.1",
+    "solana>=0.34.3",
+    "solders>=0.21.0",
+    "redis>=5.0.8",
+    "rich>=13.7.1",
+    "python-telegram-bot[all]>=21.4",
+    "aioredis>=2.0.1",
+]
+requires-python = ">=3.10"
+readme = "README.md"
+license = { text = "MIT" }
+
+[build-system]
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
+
+
+[tool.pdm]
+distribution = true
+packages = ["."]
+
+[tool.pdm.dev-dependencies]
+dev = [
+    "pytest>=8.3.2",
+    "pytest-asyncio>=0.23.8",
+]

@@ -1,0 +1,22 @@
+[project]
+name = "tgbot"
+version = "0.1.0"
+description = "Default template for PDM package"
+authors = [
+    {name = "mkdir700", email = "mkdir700@gmail.com"},
+]
+dependencies = [
+    "python-telegram-bot>=21.4",
+    "loguru>=0.7.2",
+    "redis>=5.0.8",
+    "jinja2>=3.1.4",
+    "aioredis>=2.0.1",
+    "toml>=0.10.2",
+]
+requires-python = "==3.10.*"
+readme = "README.md"
+license = {text = "MIT"}
+
+
+[tool.pdm]
+distribution = false

@@ -1,0 +1,13 @@
+{% if token_amount_change > 0   %}
+🟢<a href="https://gmgn.ai/sol/address/{{smart_money_address}}">{{smart_money_alias}}</a> {{transaction_direction}} 🟢🟢
+{% else %}
+🔴<a href="https://gmgn.ai/sol/address/{{smart_money_address}}">{{smart_money_alias}}</a> {{transaction_direction}} 🔴🔴
+{% endif %}
+【{{transaction_direction}}】 <a href="https://solscan.io/tx/{{signature}}">点击查看</a>
+🪙{{transaction_direction}}金额： {{amount_change}} 
+
+💎当前持仓： {{after_amount}}
+{{change_icon}}余额变化： {{change_rate}}
+⏮️ 交易前余额： {{before_amount}}
+
+<code>{{token_mint}}</code>

@@ -1,0 +1,47 @@
+version: "3.8"
+
+services:
+  redis:
+    image: "redis:alpine"
+    ports:
+      - "6380:6379"
+
+  monitor:
+    build:
+      context: ./monitor/
+    depends_on:
+      - redis
+    restart: unless-stopped
+    volumes:
+      - ./common:/app/common
+      - ./config.toml:/app/config.toml
+    environment:
+      - TZ=Asia/Shanghai
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+
+  parser:
+    build: ./parser/
+    depends_on:
+      - redis
+    restart: unless-stopped
+    volumes:
+      - ./common:/app/common
+      - ./config.toml:/app/config.toml
+    environment:
+      - TZ=Asia/Shanghai
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+
+  tgbot:
+    build: ./tgbot/
+    depends_on:
+      - redis
+    restart: unless-stopped
+    volumes:
+      - ./common:/app/common
+      - ./config.toml:/app/config.toml
+    environment:
+      - TZ=Asia/Shanghai
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
