@@ -53,19 +53,24 @@ def get_transaction_details(signature: Signature) -> dict[str, Any]:
     return json.loads(js_data)["result"]
 
 
-def get_signer_address(transaction: dict[str, Any]) -> str:
+def get_signer_address(transaction: dict[str, Any]) -> list[str]:
     """获取交易的签名地址"""
-    keys = transaction["transaction"]["message"]["accountKeys"]
-    for key in keys:
+    # 签名地址的数量
+    signer_count = len(transaction["transaction"]["signatures"])
+    if signer_count > 2:
+        # 不处理多个签名地址的情况
+        raise ValueError("多个签名地址")
+    account_keys = transaction["transaction"]["message"]["accountKeys"]
+
+    signer_pubkeys = []
+    for key in account_keys:
         if key["signer"] is True:
-            return key["pubkey"]
-    raise ValueError("未找到签名地址")
+            signer_pubkeys.append(key["pubkey"])
+    return signer_pubkeys
 
 
-def parse_transaction(transaction):
-    buyer_address = get_signer_address(transaction)
+def parse_transaction(transaction, buyer_address: str):
     token_mint = None
-
     meta = transaction["meta"]
 
     # 获取交易后的 token 余额
@@ -156,7 +161,16 @@ def handle_transaction(transaction_signature: str) -> dict[str, Any] | None:
     if not transaction_details:
         return None
 
-    data = parse_transaction(transaction_details)
+    data = None
+    account_keys = get_signer_address(transaction_details)
+    for key in account_keys[::-1]:
+        data = parse_transaction(transaction_details, key)
+        if data["token_mint"] is not None:
+            break
+
+    if data is None:
+        raise ValueError(f"解析数据为空: {transaction_signature}")
+
     transaction_id = calculate_transaction_id(data)
     data["transaction_id"] = transaction_id
     data["signature"] = transaction_signature
@@ -190,9 +204,15 @@ def func():
 
     try:
         data = None
+        # PERF: 优化请求交易详情
+        # 目前使用的 API，并不能在交易的第一时间获取到交易详情
+        # 所以只能在这里尝试多次重试，直到获取到交易详情
         for _ in range(60):
-            # 处理交易
-            data = handle_transaction(transaction_signature)
+            try:
+                data = handle_transaction(transaction_signature)
+            except SolanaRpcException:
+                logger.warning(f"请求交易详情失败: {transaction_signature}")
+                continue
             if data:
                 break
             logger.warning(
@@ -204,13 +224,9 @@ def func():
 
         assert data is not None, "never occurs"
         if data["transaction_type"] == "invalid":
-            logger.info(f"无效交易: {transaction_signature}, 放弃处理")
+            logger.info(f"无效交易: {transaction_signature} | 放弃处理")
             parser_error_service.add_error(transaction_signature, "无效交易")
             return
-
-    except SolanaRpcException:
-        logger.error(f"处理交易失败: {transaction_signature}, SolanaRpcException")
-        parser_error_service.add_error(transaction_signature, "SolanaRpcException")
     except Exception as e:
         import traceback
 
@@ -270,3 +286,13 @@ def main():
 
 if __name__ == "__main__":
     main()
+    # sig = Signature.from_string(
+    #     "2BYULzw6cGCXZCezCKwHpboyXsv3DDSGrapvJBikceTuAyssQaqXsVCoWPUMP9TmBGe4vJah4ojRZLr2mmPCsm7v"
+    # )
+    # data = get_transaction_details(sig)
+    # with open("data.json", "w") as f:
+    #     f.write(json.dumps(data))
+    # data = handle_transaction(
+    #     "2BYULzw6cGCXZCezCKwHpboyXsv3DDSGrapvJBikceTuAyssQaqXsVCoWPUMP9TmBGe4vJah4ojRZLr2mmPCsm7v"
+    # )
+    # print(data)
