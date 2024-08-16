@@ -91,15 +91,14 @@ class LatestTransactionDetailsProduerService:
 
 class TgBotMessageService:
 
-    def __init__(self, redis_client: Redis) -> None:
+    def __init__(self, redis_client) -> None:
         self.r = redis_client
-        self.prefix = "tgbot"
 
     def send_message(self, chat_id: str, message: str):
-        self.r.rpush(f"{self.prefix}:{chat_id}", message)
+        self.r.rpush(f"tgbot:{chat_id}", message)
 
-    async def pop_message(self, chat_id: str):
-        return await self.r.lpop(f"{self.prefix}:{chat_id}")
+    async def pop_message(self, chat_id: str, timeout: int = 0):
+        return await self.r.blpop(f"tgbot:{chat_id}", timeout=timeout)
 
 
 class ParserErrorService:
