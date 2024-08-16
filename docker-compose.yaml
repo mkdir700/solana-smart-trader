@@ -8,12 +8,12 @@ services:
 
   monitor:
     build:
-      context: ./monitor/
+      context: ./src/monitor/
     depends_on:
       - redis
     restart: unless-stopped
     volumes:
-      - ./common:/app/common
+      - ./src/common:/app/common
       - ./config.toml:/app/config.toml
     environment:
       - TZ=Asia/Shanghai
@@ -21,12 +21,12 @@ services:
       - REDIS_PORT=6379
 
   parser:
-    build: ./parser/
+    build: ./src/parser/
     depends_on:
       - redis
     restart: unless-stopped
     volumes:
-      - ./common:/app/common
+      - ./src/common:/app/common
       - ./config.toml:/app/config.toml
     environment:
       - TZ=Asia/Shanghai
@@ -34,12 +34,12 @@ services:
       - REDIS_PORT=6379
 
   tgbot:
-    build: ./tgbot/
+    build: ./src/tgbot/
     depends_on:
       - redis
     restart: unless-stopped
     volumes:
-      - ./common:/app/common
+      - ./src/common:/app/common
       - ./config.toml:/app/config.toml
     environment:
       - TZ=Asia/Shanghai
