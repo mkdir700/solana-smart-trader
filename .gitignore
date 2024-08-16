@@ -162,3 +162,5 @@ cython_debug/
 #.idea/
 name.session-journal
 name.session
+config.toml
+examples
