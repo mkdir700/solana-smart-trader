@@ -23,6 +23,7 @@ async def main():
     addresses = monitor_config.get("smart_wallets")
     if not addresses:
         raise ValueError("No smart wallets found in config.toml")
+    addresses = set(addresses)
 
     rpc_api = choice_rpc_node()
     logger.info(f"Using RPC node: {rpc_api}")
