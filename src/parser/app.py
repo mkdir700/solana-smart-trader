@@ -69,61 +69,62 @@ def get_signer_address(transaction: dict[str, Any]) -> list[str]:
     return signer_pubkeys
 
 
-def parse_transaction(transaction, buyer_address: str):
-    token_mint = None
-    meta = transaction["meta"]
+def parse_token_bal_change(transaction_meta: dict[str, Any]) -> dict[str, Any]:
+    post_token_balances = transaction_meta["postTokenBalances"]
+    pre_token_balances = transaction_meta["preTokenBalances"]
 
-    # 获取交易后的 token 余额
-    post_token_balances = meta["postTokenBalances"]
-    for balance in post_token_balances:
-        if balance["owner"] == buyer_address:
-            token_mint = balance["mint"]
-            ui_amount = balance["uiTokenAmount"]["uiAmount"]
-            # decimals = balance["uiTokenAmount"]["decimals"]
-            # post_token_balance = amount / 10**decimals
-            if ui_amount is None:
-                post_token_balance = 0
-            else:
-                post_token_balance = ui_amount
-            break
-    else:
-        token_mint = None
-        post_token_balance = 0
-
-    # 获取交易前的 token 余额
-    pre_token_balances = meta["preTokenBalances"]
+    pre_token_balances_map = {}
     for balance in pre_token_balances:
-        if balance["owner"] == buyer_address and balance["mint"] == token_mint:
-            ui_amount = balance["uiTokenAmount"]["uiAmount"]
-            # decimals = balance["uiTokenAmount"]["decimals"]
-            # pre_token_balance = amount / 10**decimals
-            if ui_amount is None:
-                pre_token_balance = 0
-            else:
-                pre_token_balance = ui_amount
-            break
+        mint = balance["mint"]
+        owner = balance["owner"]
+        pre_token_balances_map[f"{owner}:{mint}"] = balance["uiTokenAmount"]["uiAmount"]
+
+    post_token_balances_map = {}
+    for balance in post_token_balances:
+        mint = balance["mint"]
+        owner = balance["owner"]
+        post_token_balances_map[f"{owner}:{mint}"] = balance["uiTokenAmount"][
+            "uiAmount"
+        ]
+
+    data = {}
+    if len(pre_token_balances_map) > len(post_token_balances_map):
+        for key, pre_balance in pre_token_balances_map.items():
+            owner, mint = key.split(":")
+            post_balance = post_token_balances_map.get(key, 0)
+            data[owner] = {
+                "owner": owner,
+                "mint": mint,
+                "pre_balance": pre_balance,
+                "post_balance": post_balance,
+                "change_amount": post_balance - pre_balance,
+                "change_type": "inc" if post_balance > pre_balance else "dec",
+            }
     else:
-        pre_token_balance = 0
+        for key, post_balance in post_token_balances_map.items():
+            owner, mint = key.split(":")
+            pre_balance = pre_token_balances_map.get(key, 0)
+            data[owner] = {
+                "owner": owner,
+                "mint": mint,
+                "pre_balance": pre_balance,
+                "post_balance": post_balance,
+                "change_amount": post_balance - pre_balance,
+                "change_type": "inc" if post_balance > pre_balance else "dec",
+            }
+    return data
 
-    # sol_amount = None
-    # 获取本次交换使用了多少 sol
-    # instructions = transaction["transaction"]["message"]["instructions"]
-    # for instruction in instructions:
-    #     if "parsed" not in instruction:
-    #         continue
-    #     if instruction["program"] != "system":
-    #         continue
-    #     if instruction["parsed"]["type"] != "transfer":
-    #         continue
-    #     lamports = instruction["parsed"]["info"]["lamports"]
-    #     if instruction["parsed"]["info"]["source"] == buyer_address:
-    #         sol_amount = lamports / 10**9
-    #         break
-    # if sol_amount is None:
-    #     raise ValueError("未找到交易使用的 SOL 数量")
 
-    # 本次交易的 token 数量
-    token_amount = abs(post_token_balance - pre_token_balance)
+def parse_transaction(transaction, buyer_address: str):
+    meta = transaction["meta"]
+    if not (meta["err"] is None and meta["status"]["Ok"] is None):
+        raise ValueError("交易失败")
+
+    token_bal_change = parse_token_bal_change(meta)
+    pre_token_balance = token_bal_change[buyer_address]["pre_balance"]
+    post_token_balance = token_bal_change[buyer_address]["post_balance"]
+    token_mint = token_bal_change[buyer_address]["mint"]
+    change_amount = token_bal_change[buyer_address]["change_amount"]
 
     # 建仓，加仓，减仓，清仓
     if pre_token_balance == 0 and post_token_balance > 0:
@@ -142,10 +143,10 @@ def parse_transaction(transaction, buyer_address: str):
     return {
         "address": buyer_address,
         "token_mint": token_mint,
-        "token_amount": token_amount,
-        # "sol_amount": sol_amount,
+        "token_amount": post_token_balance,
         "pre_token_balance": pre_token_balance,
         "post_token_balance": post_token_balance,
+        "change_amount": change_amount,
         "transaction_type": transaction_type,
     }
 
@@ -231,7 +232,7 @@ def func():
         import traceback
 
         traceback.print_exc()
-        logger.error(f"处理交易失败: {transaction_signature}, Error: {e}")
+        logger.error(f"处理交易失败: {transaction_signature} | Error: {e}")
         parser_error_service.add_error(transaction_signature, str(e))
     else:
         latest_transaction_details_service.add_transaction_details(data)
