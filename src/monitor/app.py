@@ -19,14 +19,33 @@ client = redis.Redis.from_pool(pool)
 ping_resp = client.ping()
 
 
-async def main():
-    addresses = monitor_config.get("smart_wallets")
-    if not addresses:
-        raise ValueError("No smart wallets found in config.toml")
-    addresses = set(addresses)
+async def process_received_messages(messages: list):
+    for message in messages:
+        text = message.to_json()
+        js = json.loads(text)
+        result = js.get("result")
 
-    rpc_api = choice_rpc_node()
-    logger.info(f"Using RPC node: {rpc_api}")
+        if not isinstance(result, dict):
+            continue
+
+        try:
+            signature = result["value"]["signature"]
+        except KeyError:
+            print(js)
+            continue
+
+        # 保存到 redis
+        await client.xadd(
+            "solana:latest_transaction_signatures",
+            {"signature": signature},
+            maxlen=1000,
+        )
+        logger.info(
+            f"Transaction detected: {signature}, details: https://solscan.io/tx/{signature}"
+        )
+
+
+async def subscribe_to_account_logs(rpc_api, addresses):
     async with connect(f"wss://{rpc_api}") as websocket:
         logger.info(f"Listening for changes on accounts: {addresses}")
 
@@ -40,30 +59,24 @@ async def main():
 
         while True:
             messages = await websocket.recv()
-            for message in messages:
-                text = message.to_json()
-                js = json.loads(text)
-                result = js.get("result")
+            await process_received_messages(messages)
 
-                if not isinstance(result, dict):
-                    continue
 
-                try:
-                    signature = result["value"]["signature"]
-                except KeyError:
-                    print(js)
-                    continue
+async def run_subscription_service():
+    addresses = monitor_config.get("smart_wallets")
+    if not addresses:
+        raise ValueError("No smart wallets found in config.toml")
+    addresses = set(addresses)
 
-                # 保存到 redis
-                await client.xadd(
-                    "solana:latest_transaction_signatures",
-                    {"signature": signature},
-                    maxlen=1000,
-                )
-                logger.info(
-                    f"Transaction detected: {signature}, details: https://solscan.io/tx/{signature}"
-                )
+    rpc_api = choice_rpc_node()
+    logger.info(f"Using RPC node: {rpc_api}")
+
+    while 1:
+        try:
+            await subscribe_to_account_logs(rpc_api, addresses)
+        except Exception as e:
+            logger.error(f"Error: {e}")
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    asyncio.run(run_subscription_service())
