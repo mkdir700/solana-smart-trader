@@ -1,6 +1,7 @@
 import asyncio
 import json
 import os
+from datetime import datetime, timedelta
 
 from aioredis import Redis
 from common.config import tgbot_config
@@ -82,7 +83,14 @@ def build_message(data: dict):
     token_amount_change = post_token_balance - pre_token_balance
     change_rate = data["change_rate"]
     transaction_direction = data["transaction_direction"]
+    timestamp = float(data["timestamp"])
+    seconds = timestamp // 1000
+    milliseconds = timestamp % 1000
+    transaction_time = datetime.fromtimestamp(seconds) + timedelta(
+        milliseconds=milliseconds
+    )
 
+    logger.info(data)
     tmpl = Template(message_tmpl)
     rendered = tmpl.render(
         transaction_id=transaction_id,
@@ -98,6 +106,10 @@ def build_message(data: dict):
         amount_change=abs(token_amount_change),
         token_amount_change=token_amount_change,
         signature=signature,
+        transaction_time=transaction_time,
+        processed_time=datetime.now(),
+        token_name=data["token_name"],
+        token_symbol=data["token_symbol"],
     )
     return rendered
 
