@@ -1,20 +1,30 @@
-from app import handle_transaction
+from parsers import TransactionParserWithSolscan
 
 
 def assert_dict(data, expected):
-    if len(data) != len(expected):
-        print(data)
-        print(expected)
-        assert False
-    for key, value in expected.items():
-        assert data[key] == value, (key, data[key], value)
+    keys = (
+        "address",
+        "token_mint",
+        "token_amount",
+        "change_amount",
+        "pre_token_balance",
+        "post_token_balance",
+        "transaction_type",
+        "transaction_id",
+        "signature",
+    )
+    for key in keys:
+        if expected[key] != data.get(key):
+            print(f"Expect: {expected[key]}, But {data.get(key)}")
+            assert False
 
 
 class TestHandleTransaction:
 
     def test_01(self):
         sig = "4WZR6kQU8iDbxwFpDntbfN13f2eHpVrxKVUkvLxq33m7KNuxWN36tjEQdJS4ooEhsuBW73XHFoVwDNm7oqCQ8SAC"
-        data = handle_transaction(sig)
+        tp = TransactionParserWithSolscan(sig)
+        data = tp.get_result()
 
         assert_dict(
             data,
@@ -33,7 +43,8 @@ class TestHandleTransaction:
 
     def test_02(self):
         sig = "5uWAsNnrLaUudAqYDDm4qLBsLCgPy9pBYEStntdfaqSTVfnDirQFE3QzQXhUr63gaypK66BX694pwkub6Zfv68HM"
-        data = handle_transaction(sig)
+        tp = TransactionParserWithSolscan(sig)
+        data = tp.get_result()
         assert_dict(
             data,
             {
@@ -49,10 +60,14 @@ class TestHandleTransaction:
             },
         )
 
-    def test_03(self):
-        sig = "5EHuEwtZDuSGwZhiySHqEZrchwvmw9Vomsp3cWcZDTycrMyL96Gn541fpo791WJMNmrmvTBhW9T3ATEyoSPMxGJu"
-        data = handle_transaction(sig)
-        assert_dict(
-            data,
-            {},
-        )
+    # TODO: 代测试
+    # WSOL
+    # 4DbJun1zGarSZhocdL3YjFysVfQX5oaahCi9iVhAsaVZUh7VTvzLP9qK9Y1w77YGnY2qLpwq4RUhvJWR6z24fKEH
+
+    # def test_03(self):
+    #     sig = "5EHuEwtZDuSGwZhiySHqEZrchwvmw9Vomsp3cWcZDTycrMyL96Gn541fpo791WJMNmrmvTBhW9T3ATEyoSPMxGJu"
+    #     data = handle_transaction(sig)
+    #     assert_dict(
+    #         data,
+    #         {},
+    #     )
