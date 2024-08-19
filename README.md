@@ -6,10 +6,14 @@ Solana Smart Trader 是一个用于监控 Solana 区块链上聪明钱钱包的�
 
 ## 特性
 
-- **实时监控**：持续监控指定的聪明钱钱包，获取最新的交易信息。
-- **tgbot 报警**：通过 Telegram 机器人推送交易日志和警报，确保用户及时获取重要信息。
-- **跟随交易**：根据监控到的交易信息，按百分比自动加仓或减仓。
-- **集成 gmgnbot**：与 gmgnbot 集成，增强交易策略和执行能力。
+- **实时监控**：持续监控指定的聪明钱钱包，获取最新的交易信息，目前可在 5 秒内解析并推送交易详情
+- **tgbot 报警**：通过 Telegram 机器人推送交易日志和警报，确保用户及时获取重要信息
+
+### TODO 
+
+- [ ] 订单模块：实现交易功能，包括买入和卖出
+- [ ] 集成 GMGN 机器人：在 Telegram 上完成交易
+- [ ] 动态配置：允许用户动态配置参数，而无需重启程序
 
 ## 程序架构
 
@@ -25,7 +29,7 @@ Solana Smart Trader 是一个用于监控 Solana 区块链上聪明钱钱包的�
 1. 确保你的系统上已安装 [Docker](https://www.docker.com/) 和 [Docker Compose](https://docs.docker.com/compose/)。
 2. 克隆本仓库：
    ```bash
-   git clone https://github.com/yourusername/solana-smart-trader.git
+   git clone https://github.com/mkdir700/solana-smart-trader.git
    ```
 3. 进入项目目录：
    ```bash
