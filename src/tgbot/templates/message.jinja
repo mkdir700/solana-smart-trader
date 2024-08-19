@@ -1,7 +1,7 @@
 {% if token_amount_change > 0   %}
-🟢<a href="https://gmgn.ai/sol/address/{{smart_money_address}}">{{smart_money_alias}}</a> {{transaction_direction}} 🟢🟢
+🟢<a href="https://gmgn.ai/sol/address/{{smart_money_address}}">{{smart_money_alias}}</a> 买入 {{sol_change_amount}} SOL {{token_symbol}} 在 {{platform}} 🟢🟢
 {% else %}
-🔴<a href="https://gmgn.ai/sol/address/{{smart_money_address}}">{{smart_money_alias}}</a> {{transaction_direction}} 🔴🔴
+🔴<a href="https://gmgn.ai/sol/address/{{smart_money_address}}">{{smart_money_alias}}</a> 卖出 {{sol_change_amount}} SOL {{token_symbol}} 在 {{platform}} 🔴🔴
 {% endif %}
 【{{transaction_direction}}】 <a href="https://solscan.io/tx/{{signature}}">点击查看</a>
 🪙{{transaction_direction}}金额： {{amount_change}} 

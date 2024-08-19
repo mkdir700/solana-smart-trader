@@ -1,5 +1,4 @@
 import asyncio
-import json
 import os
 from datetime import datetime, timedelta
 
@@ -44,10 +43,10 @@ def shorten_address(s, max_length=16):
 
 def extend_data(data: dict):
     transaction_type = data["transaction_type"]
-    address = data["address"]
-    token_mint = data["token_mint"]
-    pre_token_balance = data["pre_token_balance"]
-    post_token_balance = data["post_token_balance"]
+    address = data["owner"]
+    token_mint = data["token"]["mint"]
+    pre_token_balance = data["token"]["pre_balance"]
+    post_token_balance = data["token"]["post_balance"]
 
     token_amount_change = post_token_balance - pre_token_balance
     if pre_token_balance == 0:
@@ -75,13 +74,9 @@ def extend_data(data: dict):
 
 def build_message(data: dict):
     transaction_id = data["transaction_id"]
-    address = data["address"]
-    token_mint = data["token_mint"]
-    pre_token_balance = data["pre_token_balance"]
-    post_token_balance = data["post_token_balance"]
+    platform = data["platform"]
     signature = data["signature"]
-    token_amount_change = post_token_balance - pre_token_balance
-    change_rate = data["change_rate"]
+    owner = data["owner"]
     transaction_direction = data["transaction_direction"]
     timestamp = float(data["timestamp"])
     seconds = timestamp // 1000
@@ -90,15 +85,23 @@ def build_message(data: dict):
         milliseconds=milliseconds
     )
 
-    logger.info(data)
+    # Token
+    token_mint = data["token"]["mint"]
+    pre_token_balance = data["token"]["pre_balance"]
+    post_token_balance = data["token"]["post_balance"]
+    token_amount_change = post_token_balance - pre_token_balance
+    change_rate = data["change_rate"]
+
+    # SOL
+    sol_change_amount = abs(data["sol"]["change_amount"])
+
     tmpl = Template(message_tmpl)
     rendered = tmpl.render(
         transaction_id=transaction_id,
         transaction_direction=transaction_direction,
-        smart_money_address=address,
-        smart_money_alias=shorten_address(address),
+        smart_money_address=owner,
+        smart_money_alias=shorten_address(owner),
         token_mint=token_mint,
-        token_amount=data["token_amount"],
         change_rate=f"{change_rate:.2%}",
         change_icon="📈" if token_amount_change > 0 else "📉",
         before_amount=pre_token_balance,
@@ -108,34 +111,23 @@ def build_message(data: dict):
         signature=signature,
         transaction_time=transaction_time,
         processed_time=datetime.now(),
-        token_name=data["token_name"],
-        token_symbol=data["token_symbol"],
+        token_name=data["token"]["name"],
+        token_symbol=data["token"]["symbol"],
+        sol_change_amount=sol_change_amount,
+        platform=platform,
     )
+    logger.info("\n" + rendered)
     return rendered
 
 
 async def get_latest_message() -> dict | None:
-    message = await tg_bot.pop_message(my_chat_id)
-    """
-    (b'tgbot:5049063827', b'{"address": "EARFf4ZxBRBuPJc1DyhNwXG5GJNJYSEZHNUJwTSGhzyQ", "token_mint": "Gc2yDSR1rUZ4QuWc4yxQ3y7cvAA2AE2QmrjP3a8mpump", "token_amount": 12.85346999997273, "pre_token_balance": 283068.032564, "post_token_balance": 283055.179094, "transaction_type": "reduce", "transaction_id": "EARFf4ZxBRBuPJc1DyhNwXG5GJNJYSEZHNUJwTSGhzyQ:Gc2yDSR1rUZ4QuWc4yxQ3y7cvAA2AE2QmrjP3a8mpump:12.85346999997273:reduce", "signature": "42GPWM2XNtAdJBmuyX6owbjRK9Ej2MnkqDKP1K4mSaMgeqYnQ8S11T2MmszkHHNSx9ifnXiPCVgSkc44qVZRbotz"}')
-    """
-    if message is None:
-        return
-    _, content = message
-    try:
-        data = json.loads(content.decode("utf-8"))
-    except json.JSONDecodeError:
-        logger.error(f"Failed to decode message: {content}")
-        return
-    return data
+    return await tg_bot.pop_message(my_chat_id)
 
 
 async def send_message(bot: Bot, chat_id: str, data: dict) -> None:
-    address = data["address"]
-    token_mint = data["token_mint"]
+    address = data["owner"]
+    token_mint = data["token"]["mint"]
     data = extend_data(data)
-    # change_rate = f"{data['change_rate']:.2%}"
-    # tx_direction = data["transaction_direction"]
     text = build_message(data)
 
     keyboards = [
