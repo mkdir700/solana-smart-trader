@@ -1,20 +1,22 @@
-import time
 import json
+import time
 from typing import Any
-from solana.exceptions import SolanaRpcException
-from solders.signature import Signature
+
+from common.exception import APIError
 from common.rpc_nodes import choice_rpc_node
 from common.solscan import Solscan
-from common.exception import APIError
+from common.types import SolBalanceChange, TokenAmount, TokenBalanceChange
 from loguru import logger
+from solana.exceptions import SolanaRpcException
 from solana.rpc.api import Client
+from solders.signature import Signature
 
 
-def to_float(amount: str | float, deciaml: int) -> float:
+def to_ui_amount(amount: str | float, deciaml: int) -> float:
     # "34141019152748", 6
     # -> 34141019.152748
     if isinstance(amount, (float, int)):
-        return amount
+        return amount / 10**deciaml
     return float(amount[:-deciaml] + "." + amount[-deciaml:])
 
 
@@ -75,10 +77,14 @@ class TransactionParserWithSolscan:
         tokens = metadata["tokens"]
         return tokens.get(token_address)
 
-    def get_sol_bal_change(self) -> list[dict]:
+    def get_token_price(self, token_address: str):
+        # https://price.jup.ag/v4/price?ids=DCWNeUNBQ5oCmrpQKdSpVsGVzHpiNF21qADgXVQzno2Q
+        ...
+
+    def get_sol_bal_change(self) -> list[SolBalanceChange]:
         return self.get_transaction_details()["data"]["sol_bal_change"]
 
-    def get_token_bal_change(self) -> list[dict]:
+    def get_token_bal_change(self) -> list[TokenBalanceChange]:
         return self.get_transaction_details()["data"]["token_bal_change"]
 
     def get_render_summary_main_actions(self) -> list[dict]:
@@ -101,51 +107,222 @@ class TransactionParserWithSolscan:
 
         return transaction_type
 
-    def get_result(self) -> dict:
+    def parse_on_raydium(self):
         data = {}
-        data["signature"] = self.signature
+        trader_address = self.get_signer()[0]
+        summary_main_actions = self.get_render_summary_main_actions()
 
-        sol_bal_change = self.get_sol_bal_change()
-        token_bal_change = self.get_token_bal_change()
-        if not sol_bal_change and not token_bal_change:
+        action = None
+        for _key in ("title", "body"):
+            action = summary_main_actions[0][_key]
+            for item in action[0]:
+                if item.get("text") == "Swap":
+                    break
+        if action is None:
+            raise ValueError("未找到 Swap 交易, 请检查")
+
+        tokens_involved = self.get_tokens_involved()
+        if len(tokens_involved) != 2:
+            raise ValueError("交易涉及的 token 数量不正确")
+
+        token1, token2 = tokens_involved
+        if token1 == "So11111111111111111111111111111111111111112":
+            wsol_token_address = token1
+            swap_token_address = token2
+        else:
+            wsol_token_address = token2
+            swap_token_address = token1
+
+        sol_bal_changes = self.get_sol_bal_change()
+        token_bal_changes = self.get_token_bal_change()
+
+        if not sol_bal_changes and not token_bal_changes:
             raise ValueError("sol_bal_change 或 token_bal_change 为空")
 
-        buyer_address = self.get_signer()[0]
-        data["owner"] = buyer_address
+        wsol_bal_change = None
+        token_bal_change = None
+        for bal_change in token_bal_changes:
+            token_address = bal_change["token_address"]
+            if bal_change["owner"] != trader_address:
+                continue
+            if token_address == wsol_token_address:
+                wsol_bal_change = bal_change
+            elif token_address == swap_token_address:
+                token_bal_change = bal_change
 
-        bal_change = None
-        for c in token_bal_change:
-            if c["owner"] == buyer_address:
-                bal_change = c
+        if token_bal_change is None:
+            raise ValueError("未找到 token 余额变化")
+
+        sol_bal_change = None
+        if wsol_bal_change is None:
+            for bal_change in sol_bal_changes:
+                if bal_change["address"] != trader_address:
+                    continue
+
+                # 交易者 SOL 余额变化
+                sol_bal_change = bal_change
+                break
+        else:
+            sol_bal_change = wsol_bal_change
+
+        if sol_bal_change is None:
+            raise ValueError("未找到 SOL或wSOL 余额变化")
+
+        deciaml = token_bal_change["decimals"]
+        pre_token_balance = to_ui_amount(token_bal_change["pre_balance"], deciaml)
+        post_token_balance = to_ui_amount(token_bal_change["post_balance"], deciaml)
+        token_address = token_bal_change["token_address"]
+        transaction_type = self.justify_transaction_type(
+            pre_token_balance, post_token_balance
+        )
+        token_info = self.get_token_info(token_address)
+
+        data["owner"] = trader_address
+        data["signature"] = self.signature
+        data["transaction_id"] = calculate_transaction_id(
+            trader_address,
+            token_address,
+            post_token_balance,
+            transaction_type,
+        )
+        data["transaction_type"] = transaction_type
+        data["token"] = {
+            "mint": token_address,
+            "amount": post_token_balance,
+            "pre_balance": pre_token_balance,
+            "post_balance": post_token_balance,
+            "change_amount": post_token_balance - pre_token_balance,
+            "name": token_info.get("token_name", "SPL Token"),
+            "symbol": token_info.get("token_symbol", "SPL"),
+        }
+        # wSOL 可以等价于 SOL
+        data["sol"] = {
+            "pre_balance": to_ui_amount(sol_bal_change["pre_balance"], 9),
+            "post_balance": to_ui_amount(sol_bal_change["post_balance"], 9),
+            "change_amount": to_ui_amount(sol_bal_change["change_amount"], 9),
+        }
+        return data
+
+    def swap_sol_and_token(self):
+        """使用 sol 去交换 token"""
+        data = {}
+        summary_main_actions = self.get_render_summary_main_actions()
+
+        action = None
+        for _key in ("title", "body"):
+            for item in summary_main_actions[0][_key][0]:
+                if item.get("text") == "Swap":
+                    action = summary_main_actions[0][_key]
+                    break
+        if action is None:
+            raise ValueError("未找到 Swap 交易, 请检查")
+
+        token_to_swap_info: TokenAmount = action[0][2]["token_amount"]
+        token_swapped_info: TokenAmount = action[0][4]["token_amount"]
+        sol_bal_changes = self.get_sol_bal_change()
+        token_bal_changes = self.get_token_bal_change()
+
+        if not sol_bal_changes and not token_bal_changes:
+            raise ValueError("sol_bal_change 或 token_bal_change 为空")
+
+        trader_address = self.get_signer()[0]
+
+        # 交易者的 token 余额变化
+        token_bal_change = None
+        for bal_change in token_bal_changes:
+            token_address = bal_change["token_address"]
+            if bal_change["owner"] != trader_address:
+                continue
+            if (
+                token_address == token_swapped_info["token_address"]
+                or token_address == token_to_swap_info["token_address"]
+            ):
+                token_bal_change = bal_change
                 break
 
-        if bal_change is None:
-            raise ValueError("交易者的 Token 余额没有变动，可能是转账交易")
+        sol_bal_change = None
+        for bal_change in sol_bal_changes:
+            if bal_change["address"] != trader_address:
+                continue
 
-        deciaml = bal_change["decimals"]
-        pre_token_balance = to_float(bal_change["pre_balance"], deciaml)
-        post_token_balance = to_float(bal_change["post_balance"], deciaml)
-        token_address = bal_change["token_address"]
+            # 交易者 SOL 余额变化
+            sol_bal_change = bal_change
+            break
+
+        if token_bal_change is None or sol_bal_change is None:
+            raise ValueError("未找到 token 或 SOL 余额变化")
+
+        data["owner"] = trader_address
+        data["signature"] = self.signature
+        deciaml = token_bal_change["decimals"]
+        pre_token_balance = to_ui_amount(token_bal_change["pre_balance"], deciaml)
+        post_token_balance = to_ui_amount(token_bal_change["post_balance"], deciaml)
+        token_address = token_bal_change["token_address"]
         transaction_type = self.justify_transaction_type(
             pre_token_balance, post_token_balance
         )
         token_info = self.get_token_info(token_address)
 
         data["transaction_id"] = calculate_transaction_id(
-            buyer_address,
+            trader_address,
             token_address,
             post_token_balance,
             transaction_type,
         )
         data["transaction_type"] = transaction_type
-        data["address"] = buyer_address
-        data["token_mint"] = token_address
-        data["token_amount"] = post_token_balance
-        data["pre_token_balance"] = pre_token_balance
-        data["post_token_balance"] = post_token_balance
-        data["change_amount"] = post_token_balance - pre_token_balance
-        data["token_name"] = token_info.get("token_name", "SPL Token")
-        data["token_symbol"] = token_info.get("token_symbol", "SPL")
+        data["token"] = {
+            "mint": token_address,
+            "amount": post_token_balance,
+            "pre_balance": pre_token_balance,
+            "post_balance": post_token_balance,
+            "change_amount": post_token_balance - pre_token_balance,
+            "name": token_info.get("token_name", "SPL Token"),
+            "symbol": token_info.get("token_symbol", "SPL"),
+        }
+        data["sol"] = {
+            "pre_balance": to_ui_amount(sol_bal_change["pre_balance"], 9),
+            "post_balance": to_ui_amount(sol_bal_change["post_balance"], 9),
+            "change_amount": to_ui_amount(sol_bal_change["change_amount"], 9),
+        }
+        return data
+
+    def get_accounts(self) -> dict:
+        """获取参与该交易的账户"""
+        metadata = self.get_transaction_details()["metadata"]
+        accounts = metadata["accounts"]
+        return accounts
+
+    def get_tokens_involved(self) -> list[str]:
+        """获取参与该交易的 token"""
+        return self.get_transaction_details()["data"]["tokens_involved"]
+
+    def get_result(self) -> dict:
+        summary_main_actions = self.get_render_summary_main_actions()
+        if not summary_main_actions:
+            raise ValueError("不是 Swap 交易，跳过解析")
+
+        action = None
+        platform_account = None
+        for _key in ("title", "body"):
+            action = summary_main_actions[0][_key]
+            for idx, item in enumerate(action[0]):
+                if item.get("text") == "on":
+                    platform_account = action[0][idx + 1]["account"]
+                    break
+
+        if platform_account is None or action is None:
+            raise ValueError("未知平台的交易账户，暂不支持")
+
+        accounts = self.get_accounts()
+        account_label = accounts[platform_account]["account_label"]
+        if account_label == "Pump.fun":
+            data = self.swap_sol_and_token()
+            data["platform"] = "Pump"
+        elif "Raydium" in account_label:
+            data = self.parse_on_raydium()
+            data["platform"] = "Raydium"
+        else:
+            raise ValueError("未知平台")
         return data
 
 
@@ -294,8 +471,8 @@ class TransactionParserWithRPC:
         if data is None:
             raise ValueError(f"解析数据为空: {self.signature}")
 
-        transaction_id = self.calculate_transaction_id(data)
-        data["transaction_id"] = transaction_id
+        # transaction_id = self.calculate_transaction_id(data)
+        # data["transaction_id"] = transaction_id
         data["signature"] = self.signature
         return data
 

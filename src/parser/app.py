@@ -12,6 +12,7 @@ from common.services import (
     TgBotMessageService,
 )
 from loguru import logger
+
 from parsers import TransactionParserWithSolscan
 
 redis_host = os.environ.get("REDIS_HOST", "localhost")
@@ -75,17 +76,11 @@ def process_latest_transaction():
             return
 
         data = tp.get_result()
-        if data["transaction_type"] == "invalid":
-            logger.info(f"无效交易: {signature} | 放弃处理")
-            parser_error_service.add_error(signature, "无效交易")
-            return
-
         timestamp = _id.decode("utf-8").split("-")[0]
         data["timestamp"] = timestamp
         latest_transaction_details_service.add_transaction_details(data)
         logger.info(f"处理交易成功: {signature} | {data}")
         tg_bot_service.send_message(tg_chat_id, json.dumps(data))
-        log_transaction_details(data)
     except Exception as e:
         import traceback
 
@@ -95,36 +90,6 @@ def process_latest_transaction():
     finally:
         latest_transaction_signatures_consumer_service.ack(_id)
         logger.info(f"ACK: {_id}")
-
-
-def log_transaction_details(data: dict):
-    transaction_id = data["transaction_id"]
-    transaction_type = data["transaction_type"]
-    address = data["address"]
-    token_mint = data["token_mint"]
-    pre_token_balance = data["pre_token_balance"]
-    post_token_balance = data["post_token_balance"]
-    signature = data["signature"]
-
-    token_amount_change = post_token_balance - pre_token_balance
-
-    # token 数量变化率
-    if pre_token_balance == 0:
-        change_rate = 0
-    else:
-        change_rate = token_amount_change / pre_token_balance
-
-    text = f"""
-交易ID: {transaction_id}
-签名: https://solscan.io/tx/{signature}
-聪明钱地址: {address}
-交易类型: {transaction_type}
-Token地址: {token_mint}
-Token余额: {data["token_amount"]}
-Token余额变化率: {change_rate:.2%}
-交易前的余额: {data["pre_token_balance"]}
-交易后的余额: {data["post_token_balance"]}"""
-    logger.info(text)
 
 
 def run_transaction_processing_loop():

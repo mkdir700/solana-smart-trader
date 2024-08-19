@@ -1,3 +1,5 @@
+import json
+
 from loguru import logger
 from redis.client import Redis
 
@@ -74,10 +76,10 @@ class LatestTransactionDetailsProduerService:
         self.r = redis_client
         self.stream_key = "solana:latest_transaction_details"
 
-    def add_transaction_details(self, data):
+    def add_transaction_details(self, data: dict):
         self.r.xadd(
             self.stream_key,
-            {**data},
+            {"payload": json.dumps(data)},
             maxlen=1000,
         )
 
@@ -97,8 +99,16 @@ class TgBotMessageService:
     def send_message(self, chat_id: str, message: str):
         self.r.rpush(f"tgbot:{chat_id}", message)
 
-    async def pop_message(self, chat_id: str, timeout: int = 0):
-        return await self.r.blpop(f"tgbot:{chat_id}", timeout=timeout)
+    async def pop_message(self, chat_id: str, timeout: int = 0) -> dict | None:
+        message = await self.r.blpop(f"tgbot:{chat_id}", timeout=timeout)
+        """(b'tgbot:5049063827', b'{"owner": "FJWj7EMzyT859Ad5CfTERSNKjmEWTyyY1EYunpUetiZk", "signature": "5Nc7dRpG4bogZaPySj47enfaEBjK8fAJjUzx4sMGQp9wW1frcLUVrVqCEUST49uB9nMhyUMBVhPsWySguwqX9hWs", "transaction_id": "FJWj7EMzyT859Ad5CfTERSNKjmEWTyyY1EYunpUetiZk:A2qGKaCWQqjFyT1jsssNPnysfYdZhALRJxuRYsq3pump:31768200.0:open", "transaction_type": "open", "token": {"mint": "A2qGKaCWQqjFyT1jsssNPnysfYdZhALRJxuRYsq3pump", "amount": 31768200.0, "pre_balance": 0.0, "post_balance": 31768200.0, "change_amount": 31768200.0, "name": "SPL Token", "symbol": "SPL"}, "sol": {"pre_balance": 16.324299576, "post_balance": 15.382390187, "change_amount": -0.941909389}, "platform": "Pump", "timestamp": "1724052400539"}')"""
+        if not message:
+            return None
+        try:
+            return json.loads(message[1].decode("utf-8"))
+        except json.JSONDecodeError:
+            logger.error(f"Failed to decode message, message: {message}")
+            return None
 
 
 class ParserErrorService:
