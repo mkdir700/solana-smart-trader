@@ -2,10 +2,14 @@ from typing import Literal
 
 import httpx
 
+#TODO: Set this up in the config
+# api.jup.ag in not free anymore
+JUPITER_API_URL = "https://lite-api.jup.ag"
+
 
 class JupiterAPI:
     def __init__(self):
-        self.client = httpx.AsyncClient(base_url="https://api.jup.ag")
+        self.client = httpx.AsyncClient(base_url=JUPITER_API_URL)
 
     async def get_quote(
         self,
