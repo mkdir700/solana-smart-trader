@@ -1,13 +1,11 @@
 import pytest
 from solbot_common.constants import PUMP_FUN_PROGRAM
 from solbot_common.utils import validate_transaction
-from solbot_common.utils.utils import (
-    get_associated_bonding_curve,
-    get_async_client,
-    get_bonding_curve_account,
-    get_bonding_curve_pda,
-    get_global_account,
-)
+from solbot_common.utils.utils import (get_associated_bonding_curve,
+                                       get_async_client,
+                                       get_bonding_curve_account,
+                                       get_bonding_curve_pda,
+                                       get_global_account)
 from solders.pubkey import Pubkey
 
 
@@ -155,3 +153,4 @@ async def test_validate_transaction_fail_tx_hash():
     )
     result = await validate_transaction(tx_hash)
     assert result is False
+
