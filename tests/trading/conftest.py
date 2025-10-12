@@ -1,12 +1,11 @@
-from types import SimpleNamespace
-
 import pytest
+import pytest_asyncio
 from solbot_common.types.swap import SwapEvent
 from solbot_common.types.tx import TxEvent, TxType
 from solbot_common.utils import get_async_client
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def rpc_client():
     """Real Async Solana RPC client shared across trading tests."""
     client = get_async_client()
@@ -52,20 +51,13 @@ def executor(rpc_client):
 #R5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P' tx_event=TxEvent(signature='37URoS3xVL5BYgH7SYb7AdQz5gzAPph366ZKFP779CeiQRKbbzZnuYm1MgFaJ1ZmbPSWxLoo36USSr4hY8QSZWpX', from_amount=1424953722, from_decimals=9, to_amount=42923062985000, to_decimals=6, mint='6nAvJcCLUJKffEXDRZ4SzgHcssgZJY
 #xJ6j5xbj4qpump', who='suqh5sHtr8HyJ7q8scBimULPkPpA557prMG47xCHQfK', tx_type=<TxType.OPEN_POSITION: 'open_position'>, tx_direction='buy', timestamp=1757642156, pre_token_amount=0, post_token_amount=42923062985000, program_id='6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P')
 
+
 #SwapEvent #5
 #user_pubkey='5b9tuvErmHAXpfGNv4wyRDQx6mLhYp4tKry52gxhToBa' swap_mode='ExactIn' input_mint='So11111111111111111111111111111111111111112' output_mint='Co
 #novv7mKcmj1UnPSccVoUVqPZMZqXDATJ1JGY7oEj2j' amount=50000000 ui_amount=0.05 timestamp=1757651257 amount_pct=None swap_in_type='qty' priority_fee=0.002 slippage_bps=250 by='copytrade' dynamic_slippage=False min_slippage_bps=None max_slippage_bps=None program_id='6EF8rrecthR
 #5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P' tx_event=TxEvent(signature='3AA8G5B5KQa2MBHbPYcWNwzK76gdAVb2De5ooiXtKA6y2jSkFjApNHQMGoRfsHX7btrZ1g82FjxQa9nFqpcMVzN8', from_amount=95827897, from_decimals=9, to_amount=679708083051, to_decimals=6, mint='Conovv7mKcmj1UnPSccVoUVqPZMZqXDATJ1
 #JGY7oEj2j', who='suqh5sHtr8HyJ7q8scBimULPkPpA557prMG47xCHQfK', tx_type=<TxType.ADD_POSITION: 'add_position'>, tx_direction='buy', timestamp=1757651257, pre_token_amount=30666413513140, post_token_amount=31346121596191, program_id='6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF
 #6P')
-
-#SwapEvent #6
-#user_pubkey='5b9tuvErmHAXpfGNv4wyRDQx6mLhYp4tKry52gxhToBa' swap_mode='ExactIn' input_mint='So1111111111111111111111111111
-#1111111111112' output_mint='2vdx1WyotkxA3UKc6VWnEAYobhL6iWpqj55N6g4hpump' amount=50000000 ui_amount=0.05 timestamp=1758522230 amount_pct=None swap_in_type='qty' priority_fee=0.002 slippage_bps=250 by='copytrade' dynamic_slippage=False min_sli
-#ppage_bps=None max_slippage_bps=None program_id=None tx_event=TxEvent(signature='2cbwMNFKr5zgNMJAWx1PczcurPZpP2aMT2urDzJVJJhznNy68jjGmca8GE8EVQQ5HU8xSkCFtjud3MJUBiojwpZZ', from_amount=3000025000, from_decimals=9, to_amount=29165361138622, to_
-#decimals=6, mint='2vdx1WyotkxA3UKc6VWnEAYobhL6iWpqj55N6g4hpump', who='8rvAsDKeAcEjEkiZMug9k8v1y8mW6gQQiMobd89Uy7qR', tx_type=<TxType.OPEN_POSITION: 'open_position'>, tx_direction='buy', timestamp=1758522230, pre_token_amount=0, post_token_amo
-#unt=29165361138622, program_id=None)
-
 @pytest.fixture
 def tx_event_from_logs() -> TxEvent:
     """TxEvent instance based on logged output."""
@@ -114,12 +106,44 @@ def swap_event_from_logs(tx_event_from_logs) -> SwapEvent:
 
 
 @pytest.fixture
-def swap_event_from_logs_second():
-    """DEX-aggregator style event (no specific program id)."""
-    return SimpleNamespace(
+def tx_event_from_logs_second() -> TxEvent:
+    """Second TxEvent instance derived from logged example (#2)."""
+    return TxEvent(
+        signature="3gqWLDzno5LKU1asduxDdACMbQmQFdvfwU6WJarnWT3Mcrwb73oYbmfaFaDVLFtyZhwToWi4WZEawL9y9JzdP1RA",
+        from_amount=1090005000,
+        from_decimals=9,
+        to_amount=1037510604527,
+        to_decimals=6,
+        mint="6NqXBdXA38ZXEGU7nGfp9Fr4JSTKgtfZDqZit91Dbonk",
+        who="DfMxre4cKmvogbLrPigxmibVTTQDuzjdXojWzjCXXhzj",
+        tx_type=TxType.ADD_POSITION,
+        tx_direction="buy",
+        timestamp=1756531032,
+        pre_token_amount=19836071332282,
+        post_token_amount=20873581936809,
+        program_id=None,
+    )
+
+
+@pytest.fixture
+def swap_event_from_logs_second(tx_event_from_logs_second) -> SwapEvent:
+    """Second SwapEvent matching the commented example (#2)."""
+    return SwapEvent(
+        user_pubkey="5b9tuvErmHAXpfGNv4wyRDQx6mLhYp4tKry52gxhToBa",
         swap_mode="ExactIn",
         input_mint="So11111111111111111111111111111111111111112",
-        output_mint="G1WcqfZxkZGHvPLRvbSpVDgzsWxuWxbi1GcufwcHpump",
+        output_mint="6NqXBdXA38ZXEGU7nGfp9Fr4JSTKgtfZDqZit91Dbonk",
+        amount=50000000,
+        ui_amount=0.05,
+        timestamp=1756531032,
+        amount_pct=None,
+        swap_in_type="qty",
+        priority_fee=0.0001,
+        slippage_bps=250,
+        by="copytrade",
+        dynamic_slippage=False,
+        min_slippage_bps=None,
+        max_slippage_bps=None,
         program_id=None,
         tx_event=tx_event_from_logs_second,
     )
@@ -255,62 +279,3 @@ def swap_event_from_logs_fifth(tx_event_from_logs_fifth) -> SwapEvent:
         program_id="6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P",
         tx_event=tx_event_from_logs_fifth,
     )
-
-
-
-@pytest.fixture
-def tx_event_from_logs_sixth() -> TxEvent:
-    """Sixth TxEvent instance derived from updated logged example (#6)."""
-    return TxEvent(
-        signature="2cbwMNFKr5zgNMJAWx1PczcurPZpP2aMT2urDzJVJJhznNy68jjGmca8GE8EVQQ5HU8xSkCFtjud3MJUBiojwpZZ",
-        from_amount=3000025000,
-        from_decimals=9,
-        to_amount=29165361138622,
-        to_decimals=6,
-        mint="2vdx1WyotkxA3UKc6VWnEAYobhL6iWpqj55N6g4hpump",
-        who="8rvAsDKeAcEjEkiZMug9k8v1y8mW6gQQiMobd89Uy7qR",
-        tx_type=TxType.OPEN_POSITION,
-        tx_direction="buy",
-        timestamp=1758522230,
-        pre_token_amount=0,
-        post_token_amount=29165361138622,
-        program_id=None,
-    )
-
-
-
-@pytest.fixture
-def swap_event_from_logs_sixth(tx_event_from_logs_sixth) -> SwapEvent:
-    """Sixth SwapEvent matching the updated commented example (#6)."""
-    return SwapEvent(
-        user_pubkey="5b9tuvErmHAXpfGNv4wyRDQx6mLhYp4tKry52gxhToBa",
-        swap_mode="ExactIn",
-        input_mint="So11111111111111111111111111111111111111112",
-        output_mint="2vdx1WyotkxA3UKc6VWnEAYobhL6iWpqj55N6g4hpump",
-        amount=50000000,
-        ui_amount=0.05,
-        timestamp=1758522230,
-        amount_pct=None,
-        swap_in_type="qty",
-        priority_fee=0.002,
-        slippage_bps=250,
-        by="copytrade",
-        dynamic_slippage=False,
-        min_slippage_bps=None,
-        max_slippage_bps=None,
-        program_id=None,
-        tx_event=tx_event_from_logs_sixth,
-    )
-
-
-@pytest.fixture
-def swapper_for_sixth(rpc_client):
-    """Swapper instance for SwapEvent #6 via TradingService.use_route."""
-    from app.trading.trading.transaction import TradingRoute, TradingService
-
-    service = TradingService(rpc_client)
-    # For #6, route via Pump (token ends with 'pump' and program_id is None)
-    return service.use_route(TradingRoute.PUMP)
-
-
-    

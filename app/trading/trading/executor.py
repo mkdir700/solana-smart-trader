@@ -6,11 +6,11 @@ from solbot_common.constants import PUMP_FUN_PROGRAM, RAY_V4
 from solbot_common.log import logger
 from solbot_common.models.tg_bot.user import User
 from solbot_common.types.swap import SwapEvent
+from solbot_common.utils.pump import is_pumpfun_token
 from solbot_db.session import NEW_ASYNC_SESSION, provide_session
 from solders.keypair import Keypair  # type: ignore
 from solders.signature import Signature  # type: ignore
 from sqlmodel import select
-
 from trading.swap import SwapDirection, SwapInType
 from trading.transaction import TradingRoute, TradingService
 
@@ -50,28 +50,34 @@ class TradingExecutor:
         _, token_address = self._get_direction_address(swap_event)
 
         try:
-            is_pump_token_graduated = await self._launch_cache.is_pump_token_graduated(token_address)
-            logger.info(f"Pump token {token_address} is graduated: {is_pump_token_graduated}")
-            if program_id == PUMP_FUN_PROGRAM_ID or (
-                token_address.endswith("pump") and not is_pump_token_graduated
-            ):
-                should_use_pump = True
-                logger.info(
-                    f"Token {token_address} has not graduated, using Pump protocol to trade"
-                )
-            else:
-                # Check if the token is launched on Raydium
-                pool_data = await get_preferred_pool(token_address)
-                if pool_data is not None:
+             is_pump = await is_pumpfun_token(token_address)
+        except ValueError as e:
+            logger.warning(f"Failed to check if token is pumpfun token, cause: {e}. Falling back to guess.")
+            is_pump = token_address.endswith("pump")
+
+        
+        try:
+            if is_pump:
+                is_pump_token_graduated = await self._launch_cache.is_pump_token_graduated(token_address)
+                logger.info(f"Pump token {token_address} is graduated: {is_pump_token_graduated}")
+                if not is_pump_token_graduated:
+                    should_use_pump = True
                     logger.info(
-                        f"Token {token_address} is trading on Raydium, using Raydium protocol to trade"
+                        f"Token {token_address} has not graduated, using Pump protocol to trade"
                     )
-                    # Program ID should be Raydium V4 when the token is launched on Raydium
-                    if program_id != RAY_V4_PROGRAM_ID:
-                        logger.warning("Original transaction was on a different protocol than Raydium")
-                    # assert program_id == RAY_V4_PROGRAM_ID, "Program ID must be Raydium V4"
-                    # 如果 token 在 Raydium 上启动，则使用 Raydium 协议进行交易
-                    #swap_event.program_id = RAY_V4_PROGRAM_ID
+                else:
+                    # Check if the token is launched on Raydium
+                    pool_data = await get_preferred_pool(token_address)
+                    if pool_data is not None:
+                        logger.info(
+                            f"Token {token_address} is trading on Raydium, using Raydium protocol to trade"
+                        )
+                        # Program ID should be Raydium V4 when the token is launched on Raydium
+                        if program_id != RAY_V4_PROGRAM_ID:
+                            logger.warning("Original transaction was on a different protocol than Raydium")
+                        # assert program_id == RAY_V4_PROGRAM_ID, "Program ID must be Raydium V4"
+                        # 如果 token 在 Raydium 上启动，则使用 Raydium 协议进行交易
+                        #swap_event.program_id = RAY_V4_PROGRAM_ID
         except Exception as e:
             logger.error(f"Failed graduation status check on PUMP, cause: {e}")
 
@@ -86,7 +92,9 @@ class TradingExecutor:
             logger.warning("Program ID is Unknown. Using Jupiter DEX aggregator to trade")
             trade_route = TradingRoute.DEX
         else:
-            raise ValueError(f"Program ID is not supported, {swap_event.program_id}")
+            logger.warning("Program ID: {}, is unkown to the bot. Using Jupiter DEX aggregator to trade", swap_event.program_id)
+            trade_route = TradingRoute.DEX
+            #raise ValueError(f"Program ID is not supported, {swap_event.program_id}")
 
         return trade_route
 
