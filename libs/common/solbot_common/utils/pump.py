@@ -4,7 +4,7 @@ from solbot_common.config import settings
 from solbot_common.utils.shyft import ShyftAPI
 
 
-@cached(ttl=None, noself=True)
+@cached(ttl=None)
 async def is_pumpfun_token(mint_address):
     shyft_api = ShyftAPI(settings.api.shyft_api_key)
     resp = await shyft_api.get_token_info(mint_address)
