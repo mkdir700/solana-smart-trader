@@ -1,6 +1,7 @@
 from solbot_common.constants import PUMP_FUN_PROGRAM
 from solbot_common.log import logger
-from solbot_common.utils.utils import get_async_client, get_bonding_curve_account
+from solbot_common.utils.utils import (get_async_client,
+                                       get_bonding_curve_account)
 from solders.pubkey import Pubkey
 
 from .cached import cached
@@ -20,11 +21,13 @@ class LaunchCache:
     def __repr__(self) -> str:
         return "LaunchCache()"
 
-    @cached(ttl=None, noself=True)
+    @cached(ttl=None, noself=True, skip_cache_func=lambda result: not result)
     async def is_pump_token_graduated(self, mint: str | Pubkey) -> bool:
         """Examine if a Pump.fun token has graduated.
 
         By checking if the token has completed the bonding curve.
+
+        Only cache the result upon graduation.
 
         Args:
             mint (str): 代币的 mint 地址
