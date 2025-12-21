@@ -2,9 +2,7 @@
 name = "open-sol-bot"
 version = "0.2.1"
 description = "Open Solana Trading Bot"
-authors = [
-    { name = "mkdir700", email = "mkdir700@gmail.com" },
-]
+authors = [{ name = "mkdir700", email = "mkdir700@gmail.com" }]
 requires-python = "==3.10.*"
 readme = "README.md"
 license = { text = "Apache-2.0" }
@@ -46,8 +44,11 @@ dev = [
     "pytest-asyncio>=0.24.0",
     "pytest-xprocess==0.18.1",
     "py==1.10.0",
-    "ruff>=0.3.4",
+    "ruff>=0.14.10",
 ]
+
+[tool.ty.environment]
+root = ["./app"]
 
 [tool.ruff]
 target-version = "py310"
@@ -67,25 +68,25 @@ select = [
     "RUF", # ruff-specific rules
 ]
 ignore = [
-    "E501",  # line too long, handled by formatter
+    "E501", # line too long, handled by formatter
     # 以下是暂时忽略的错误，后续可以逐步修复
     "RUF001",
     "RUF002",
     "RUF003",
-    "B007",  # Loop control variable not used within loop body
-    "B017",  # pytest.raises(Exception) should be considered evil
-    "B019",  # Use of functools.lru_cache on methods can lead to memory leaks
-    "B904",  # Within an except clause, raise exceptions with raise ... from err
-    "C408",  # Unnecessary dict call (rewrite as a literal)
-    "E402",  # Module level import not at top of file
-    "E712",  # Avoid equality comparisons to True/False
-    "F403",  # from module import * used; unable to detect undefined names
-    "F841",  # Local variable is assigned to but never used
-    "N801",  # Class name should use CapWords convention
-    "N802",  # Function name should be lowercase
-    "N805",  # First argument of a method should be named self
-    "N806",  # Variable in function should be lowercase
-    "N818",  # Exception name should be named with an Error suffix
+    "B007",   # Loop control variable not used within loop body
+    "B017",   # pytest.raises(Exception) should be considered evil
+    "B019",   # Use of functools.lru_cache on methods can lead to memory leaks
+    "B904",   # Within an except clause, raise exceptions with raise ... from err
+    "C408",   # Unnecessary dict call (rewrite as a literal)
+    "E402",   # Module level import not at top of file
+    "E712",   # Avoid equality comparisons to True/False
+    "F403",   # from module import * used; unable to detect undefined names
+    "F841",   # Local variable is assigned to but never used
+    "N801",   # Class name should use CapWords convention
+    "N802",   # Function name should be lowercase
+    "N805",   # First argument of a method should be named self
+    "N806",   # Variable in function should be lowercase
+    "N818",   # Exception name should be named with an Error suffix
     "SIM105", # Use contextlib.suppress instead of try-except-pass
     "SIM108", # Use ternary operator instead of if-else-block
     "SIM117", # Use a single with statement with multiple contexts

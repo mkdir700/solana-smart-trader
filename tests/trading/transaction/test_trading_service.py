@@ -6,12 +6,10 @@ from solana.rpc.async_api import AsyncClient
 from solders.keypair import Keypair
 from solders.transaction import VersionedTransaction
 from trading.swap import SwapDirection
+from trading.transaction import AggregateTransactionBuilder, TradingService
 from trading.transaction.builders.base import TransactionBuilder
-from trading.transaction.builders.gmgn import GMGNTransactionBuilder
 from trading.transaction.builders.pump import PumpTransactionBuilder
 from trading.transaction.builders.ray_v4 import RaydiumV4TransactionBuilder
-from trading.transaction.factory import (AggregateTransactionBuilder,
-                                         TradingService)
 from trading.transaction.protocol import TradingRoute
 
 
@@ -121,7 +119,7 @@ async def test_trading_service_route_selection():
 
     # 测试无效路由
     with pytest.raises(ValueError) as exc_info:
-        service.select_builder("INVALID_ROUTE")
+        service.select_builder("INVALID_ROUTE")  # type: ignore[invalid-argument-type]
     assert "Unsupported trading route" in str(exc_info.value)
 
 
@@ -152,7 +150,7 @@ async def test_trading_service_use_route():
         swapper = service.use_route(TradingRoute.RAYDIUM_V4)
         assert isinstance(swapper.builder, RaydiumV4TransactionBuilder)
         mock_default_sender.assert_called_once()
-        
+
         # DEX
         swapper = service.use_route(TradingRoute.DEX)
         assert isinstance(swapper.builder, AggregateTransactionBuilder)

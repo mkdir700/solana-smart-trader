@@ -43,18 +43,20 @@ dependencies = [
 
     # 监控
     "sentry-sdk>=2.21.0",
+
+    # 本地依赖
+    "solbot-cache",
+    "solbot-db",
+    "solbot-services",
+    "solbot-common",
+    "solbot-yellowstone-grpc",
 ]
 requires-python = "==3.10.*"
 license = { text = "Apache-2.0" }
 
-[tool.pdm]
-distribution = false
-
-[tool.pdm.dev-dependencies]
-local = [
-    "solbot-cache @ file:///${PROJECT_ROOT}/libs/cache",
-    "solbot-db @ file:///${PROJECT_ROOT}/libs/db",
-    "solbot-services @ file:///${PROJECT_ROOT}/libs/services",
-    "solbot-common @ file:///${PROJECT_ROOT}/libs/common",
-    "solbot-yellowstone-grpc @ file:///${PROJECT_ROOT}/libs/yellowstone_grpc",
-]
+[tool.uv.sources]
+solbot-cache = { path = "../../libs/cache", editable = true }
+solbot-db = { path = "../../libs/db", editable = true }
+solbot-services = { path = "../../libs/services", editable = true }
+solbot-common = { path = "../../libs/common", editable = true }
+solbot-yellowstone-grpc = { path = "../../libs/yellowstone_grpc", editable = true }

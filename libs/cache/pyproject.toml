@@ -16,7 +16,6 @@ dependencies = [
     "pydantic-settings>=2.6.1",
     "pydantic-settings-toml>=0.2.0",
     "orjson>=3.10.11",
-    "aioredis[hiredis]>=2.0.1",
     "pymysql>=1.1.1",
     "anchorpy>=0.20.1",
     "backoff>=2.2.1",
@@ -39,5 +38,8 @@ requires-python = "==3.10.*"
 license = { text = "Apache-2.0" }
 
 [build-system]
-requires = ["pdm-backend"]
-build-backend = "pdm.backend"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv.sources]
+solbot-common = { path = "../common", editable = true }

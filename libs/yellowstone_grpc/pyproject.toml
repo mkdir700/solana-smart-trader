@@ -14,17 +14,14 @@ requires-python = "==3.10.*"
 license = { text = "Apache-2.0" }
 
 [build-system]
-requires = ["pdm-backend"]
-build-backend = "pdm.backend"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
-[tool.pdm]
-distribution = true
+[tool.hatch.build.targets.wheel]
+packages = ["yellowstone_grpc"]
 
-[tool.pdm.dev-dependencies]
-dev = [
-    "pytest>=8.0.0",
-    "pytest-asyncio>=0.24.0",
-]
+[dependency-groups]
+dev = ["pytest>=8.0.0", "pytest-asyncio>=0.24.0"]
 
-[tool.pdm.scripts]
-generate = { shell = "cd yellowstone-grpc-proto && ./generate.sh" }
+[tool.uv.sources]
+solbot-common = { path = "../common", editable = true }

@@ -5,18 +5,15 @@ description = "Common utilities for Solana Trading Bot"
 authors = [{ name = "mkdir700", email = "mkdir700@gmail.com" }]
 dependencies = [
     "pydantic>=2.0.0",
-    "pydantic-settings>=2.0.0",
-    "loguru>=0.7.2",
-    "tomli>=2.0.0",
-    "solana>=0.35.1",
-    "python-dotenv>=1.0.1",
-    "loguru>=0.7.2",
-    "solders>=0.25.0",
-    "base58>=2.1.1",
-    "tomli>=2.1.0",
-    "sqlmodel>=0.0.22",
     "pydantic-settings>=2.6.1",
     "pydantic-settings-toml>=0.2.0",
+    "loguru>=0.7.2",
+    "tomli>=2.1.0",
+    "solana>=0.35.1",
+    "python-dotenv>=1.0.1",
+    "solders>=0.25.0",
+    "base58>=2.1.1",
+    "sqlmodel>=0.0.22",
     "orjson>=3.10.11",
     "aioredis[hiredis]>=2.0.1",
     "pymysql>=1.1.1",
@@ -42,5 +39,5 @@ readme = "README.md"
 license = { text = "Apache-2.0" }
 
 [build-system]
-requires = ["pdm-backend"]
-build-backend = "pdm.backend"
+requires = ["hatchling"]
+build-backend = "hatchling.build"

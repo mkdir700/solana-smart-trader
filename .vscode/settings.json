@@ -6,6 +6,12 @@
   ],
   "python.testing.unittestEnabled": false,
   "python.testing.pytestEnabled": true,
+  "python.analysis.extraPaths": [
+    "app/trading",
+    "app/tg-bot",
+    "app/wallet-tracker",
+    "app/cache-preloader",
+  ],
   "[python]": {
     "editor.codeActionsOnSave": {
       "source.fixAll": "explicit",
